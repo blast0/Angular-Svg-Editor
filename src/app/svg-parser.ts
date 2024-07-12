@@ -28,15 +28,16 @@ export class SvgParser {
             const component: string[] = [type];
             for (const regex of expectedRegexList) {
                 const match = path.slice(cursor).match(regex);
-
                 if (match !== null) {
                     component.push(match[0]);
                     cursor += match[0].length;
                     const ws = path.slice(cursor).match(kCommaWsp);
+               
                     if (ws !== null) {
                         cursor += ws[0].length;
                     }
                 } else if (component.length === 1) {
+                    console.log(cursor, components)
                     return [cursor, components];
                 } else {
                     throw new Error('malformed path (first error at ' + cursor + ')');
@@ -44,6 +45,7 @@ export class SvgParser {
             }
             components.push(component);
             if (expectedRegexList.length === 0) {
+                console.log(cursor, components)
                 return [cursor, components];
             }
             if (type === 'm') {

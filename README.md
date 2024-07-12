@@ -1,7 +1,7 @@
 # SvgPathEditor
 
-Edit or create SVG paths in browser: https://yqnn.github.io/svg-path-editor/
-[![Image of Yaktocat](./doc/screenshot.png)](https://yqnn.github.io/svg-path-editor/)
+Edit or create SVG paths in browser: https://blast0.github.io/svg-path-editor/
+[![Image of Yaktocat](./doc/screenshot.png)](https://blast0.github.io/svg-path-editor/)
 
 ## How to Use
 

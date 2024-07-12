@@ -1,4 +1,169 @@
 <div style="display:flex;flex-direction:row;height: 100%;" @leftColumnParent>
+
+
+    <div class="drawings">
+        <button mat-raised-button class="left-column-open" *ngIf="!isLeftPanelOpened"
+        (click)="toggleLeftPanel()"
+        >
+            <mat-icon>arrow_right</mat-icon>
+        </button>
+        <button mat-mini-fab *ngIf="((!draggedPoint && focusedItem) || parsedPath.path.length===0) && !(cfg.preview || isEditingImages)"
+            color="accent"
+            class="add-button"
+            [ngStyle]="{
+                'left': ((focusedItem ? focusedItem.targetLocation().x : 0)-cfg.viewPortX)/strokeWidth+'px',
+                'top': ((focusedItem ? focusedItem.targetLocation().y : 0)-cfg.viewPortY)/strokeWidth+'px'
+            }"
+            [ngClass]="{'opened':isContextualMenuOpened}"
+            [matMenuTriggerFor]="focusedItem ? appMenu : appCreate"
+            [matMenuTriggerData]="{item:focusedItem, idx:-1}"
+            (menuOpened)="isContextualMenuOpened = true"
+            (menuClosed)="isContextualMenuOpened = false"
+        >
+            <mat-icon svgIcon="more" *ngIf="focusedItem"></mat-icon>
+            <mat-icon *ngIf="!focusedItem">add</mat-icon>
+        </button>
+
+        <label class="cursor-position" *ngIf="cursorPosition" >
+            {{cursorPosition.x.toFixed(cursorPosition.decimals)}},
+            {{cursorPosition.y.toFixed(cursorPosition.decimals)}}
+        </label>
+
+        <button mat-mini-fab *ngIf="(focusedImage && !cfg.preview && !dragging)"
+            color="accent"
+            class="add-button"
+            [ngStyle]="{
+                'left': 8 + (max(focusedImage.x1,focusedImage.x2) - cfg.viewPortX)/strokeWidth+'px',
+                'top': 8 + (max(focusedImage.y1,focusedImage.y2) - cfg.viewPortY)/strokeWidth+'px'
+            }"
+            [ngClass]="{'opened':isContextualMenuOpened}"
+            [matMenuTriggerFor]="appImage"
+            [matMenuTriggerData]="{image:focusedImage}"
+            (menuOpened)="isContextualMenuOpened = true"
+            (menuClosed)="isContextualMenuOpened = false"
+        >
+            <mat-icon svgIcon="more"></mat-icon>
+        </button>
+
+        <div class="scene-top-actions">
+            <button mat-mini-fab
+                color="primary"
+                matTooltip="Undo"
+                matTooltipPosition="below"
+                (click)="undo()"
+                [disabled]="!canUndo()"
+            >
+                <mat-icon>undo</mat-icon>
+            </button>
+            <button mat-mini-fab
+                color="primary"
+                matTooltip="Redo"
+                matTooltipPosition="below"
+                (click)="redo()"
+                [disabled]="!canRedo()"
+            >
+                <mat-icon>redo</mat-icon>
+            </button>
+
+            <app-upload-image
+                [class.displayed]="isEditingImages"
+                class="add-image-button"
+                (addImage)="addImage($event)"
+                (cancel)="cancelAddImage()"
+                #uploader
+            ></app-upload-image>
+
+            <button mat-mini-fab
+                [color]="isEditingImages ? 'accent' : 'primary'"
+                [matTooltip]="isEditingImages ? '' : 'Toggle image management mode'"
+                matTooltipPosition="below"
+                style="margin-right: 24px;margin-left: 24px"
+                (click)="toggleImageEditing(uploader)"
+            >
+                <mat-icon>image</mat-icon>
+            </button>
+
+            <app-export [path]="rawPath" [name]="pathName || '' " style="margin-right: 8px"></app-export>
+            <app-share [path]="rawPath"></app-share>
+        </div>
+        <div class="scene-bottom-actions">
+            <button
+                mat-mini-fab
+                color="primary"
+                (click)="cfg.snapToGrid = !cfg.snapToGrid"
+                matTooltip="Snap to Grid"
+                matTooltipPosition="left"
+            >
+                <mat-icon> {{ cfg.snapToGrid ? 'grid_on' : 'grid_off' }}</mat-icon> 
+            </button>
+            <button
+                mat-mini-fab
+                color="primary"
+                (click)="cfg.viewPortLocked=false;canvas?.zoomViewPort(9/10)"
+                matTooltip="Zoom In"
+                matTooltipPosition="left"
+                style="margin-top: 24px"
+            >
+                <mat-icon svgIcon="zoom_in"></mat-icon> 
+            </button>
+            <button
+                mat-mini-fab
+                color="primary"
+                (click)="cfg.viewPortLocked=false;zoomAuto()"
+                matTooltip="Zoom to Fit"
+                matTooltipPosition="left"
+            >
+                <mat-icon svgIcon="zoom_fit"></mat-icon> 
+            </button>
+            <button
+                mat-mini-fab
+                color="primary"
+                (click)="cfg.viewPortLocked=false;canvas?.zoomViewPort(10/9)"
+                matTooltip="Zoom Out"
+                matTooltipPosition="left"
+            >
+                <mat-icon svgIcon="zoom_out"></mat-icon> 
+            </button>
+        </div>
+
+        <svg
+            xmlns="http://www.w3.org/2000/svg" 
+            xmlns:xlink="http://www.w3.org/1999/xlink"
+            app-canvas 
+            [attr.viewBox]="cfg.viewPortX+' '+cfg.viewPortY+' '+cfg.viewPortWidth+' '+cfg.viewPortHeight"
+            [ngClass]="{preview:cfg.preview}"
+        
+            [parsedPath]="parsedPath"
+            [targetPoints]="targetPoints"
+            [controlPoints]="controlPoints"
+            [(draggedPoint)]="draggedPoint"
+            (focusedItemChange)="focusItem($event)"
+            [focusedItem]="focusedItem"
+            [(hoveredItem)]="hoveredItem"
+            [(wasCanvasDragged)]="wasCanvasDragged"
+            [draggedIsNew]="draggedIsNew"
+            [decimals]="decimals"
+            [viewPortX]="cfg.viewPortX"
+            [viewPortY]="cfg.viewPortY"
+            [viewPortWidth]="cfg.viewPortWidth"
+            [viewPortHeight]="cfg.viewPortHeight"
+            [strokeWidth]="strokeWidth"
+            [preview]="cfg.preview"
+            [filled]="cfg.filled"
+            [showTicks]="cfg.showTicks"
+            [tickInterval]="cfg.tickInterval"
+            (afterModelChange)="afterModelChange()"
+            (dragging)="setIsDragging($event)"
+            (canvasWidthChange)="canvasWidth = $event || canvasWidth"
+            (canvasHeightChange)="canvasHeight = $event"
+            (emptyCanvas)="isLeftPanelOpened = false"
+            (viewPort)="updateViewPort($event.x, $event.y, $event.w, $event.h, $event.force)"
+            [editImages]="isEditingImages"
+            [images]="images"
+            [(focusedImage)]="focusedImage"
+            (cursorPosition)="setCursorPosition($event)"
+        ></svg>
+    </div>
     <div *ngIf="isLeftPanelOpened" @leftColumn (@leftColumn.done)="canvas?.refreshCanvasSize()" class="left-column-wrapper">
         <button mat-raised-button class="left-column-close"
             (click)="toggleLeftPanel()"
@@ -292,178 +457,14 @@
             <div class="spacer"></div>
         </div>
     </div>
-
-    <div class="drawings">
-        <button mat-raised-button class="left-column-open" *ngIf="!isLeftPanelOpened"
-        (click)="toggleLeftPanel()"
-        >
-            <mat-icon>arrow_right</mat-icon>
-        </button>
-        <button mat-mini-fab *ngIf="((!draggedPoint && focusedItem) || parsedPath.path.length===0) && !(cfg.preview || isEditingImages)"
-            color="accent"
-            class="add-button"
-            [ngStyle]="{
-                'left': ((focusedItem ? focusedItem.targetLocation().x : 0)-cfg.viewPortX)/strokeWidth+'px',
-                'top': ((focusedItem ? focusedItem.targetLocation().y : 0)-cfg.viewPortY)/strokeWidth+'px'
-            }"
-            [ngClass]="{'opened':isContextualMenuOpened}"
-            [matMenuTriggerFor]="focusedItem ? appMenu : appCreate"
-            [matMenuTriggerData]="{item:focusedItem, idx:-1}"
-            (menuOpened)="isContextualMenuOpened = true"
-            (menuClosed)="isContextualMenuOpened = false"
-        >
-            <mat-icon svgIcon="more" *ngIf="focusedItem"></mat-icon>
-            <mat-icon *ngIf="!focusedItem">add</mat-icon>
-        </button>
-
-        <label class="cursor-position" *ngIf="cursorPosition" >
-            {{cursorPosition.x.toFixed(cursorPosition.decimals)}},
-            {{cursorPosition.y.toFixed(cursorPosition.decimals)}}
-        </label>
-
-        <button mat-mini-fab *ngIf="(focusedImage && !cfg.preview && !dragging)"
-            color="accent"
-            class="add-button"
-            [ngStyle]="{
-                'left': 8 + (max(focusedImage.x1,focusedImage.x2) - cfg.viewPortX)/strokeWidth+'px',
-                'top': 8 + (max(focusedImage.y1,focusedImage.y2) - cfg.viewPortY)/strokeWidth+'px'
-            }"
-            [ngClass]="{'opened':isContextualMenuOpened}"
-            [matMenuTriggerFor]="appImage"
-            [matMenuTriggerData]="{image:focusedImage}"
-            (menuOpened)="isContextualMenuOpened = true"
-            (menuClosed)="isContextualMenuOpened = false"
-        >
-            <mat-icon svgIcon="more"></mat-icon>
-        </button>
-
-        <div class="scene-top-actions">
-            <button mat-mini-fab
-                color="primary"
-                matTooltip="Undo"
-                matTooltipPosition="below"
-                (click)="undo()"
-                [disabled]="!canUndo()"
-            >
-                <mat-icon>undo</mat-icon>
-            </button>
-            <button mat-mini-fab
-                color="primary"
-                matTooltip="Redo"
-                matTooltipPosition="below"
-                (click)="redo()"
-                [disabled]="!canRedo()"
-            >
-                <mat-icon>redo</mat-icon>
-            </button>
-
-            <app-upload-image
-                [class.displayed]="isEditingImages"
-                class="add-image-button"
-                (addImage)="addImage($event)"
-                (cancel)="cancelAddImage()"
-                #uploader
-            ></app-upload-image>
-
-            <button mat-mini-fab
-                [color]="isEditingImages ? 'accent' : 'primary'"
-                [matTooltip]="isEditingImages ? '' : 'Toggle image management mode'"
-                matTooltipPosition="below"
-                style="margin-right: 24px;margin-left: 24px"
-                (click)="toggleImageEditing(uploader)"
-            >
-                <mat-icon>image</mat-icon>
-            </button>
-
-            <app-export [path]="rawPath" [name]="pathName || '' " style="margin-right: 8px"></app-export>
-            <app-share [path]="rawPath"></app-share>
-        </div>
-        <div class="scene-bottom-actions">
-            <button
-                mat-mini-fab
-                color="primary"
-                (click)="cfg.snapToGrid = !cfg.snapToGrid"
-                matTooltip="Snap to Grid"
-                matTooltipPosition="left"
-            >
-                <mat-icon> {{ cfg.snapToGrid ? 'grid_on' : 'grid_off' }}</mat-icon> 
-            </button>
-            <button
-                mat-mini-fab
-                color="primary"
-                (click)="cfg.viewPortLocked=false;canvas?.zoomViewPort(9/10)"
-                matTooltip="Zoom In"
-                matTooltipPosition="left"
-                style="margin-top: 24px"
-            >
-                <mat-icon svgIcon="zoom_in"></mat-icon> 
-            </button>
-            <button
-                mat-mini-fab
-                color="primary"
-                (click)="cfg.viewPortLocked=false;zoomAuto()"
-                matTooltip="Zoom to Fit"
-                matTooltipPosition="left"
-            >
-                <mat-icon svgIcon="zoom_fit"></mat-icon> 
-            </button>
-            <button
-                mat-mini-fab
-                color="primary"
-                (click)="cfg.viewPortLocked=false;canvas?.zoomViewPort(10/9)"
-                matTooltip="Zoom Out"
-                matTooltipPosition="left"
-            >
-                <mat-icon svgIcon="zoom_out"></mat-icon> 
-            </button>
-        </div>
-
-        <svg
-            xmlns="http://www.w3.org/2000/svg" 
-            xmlns:xlink="http://www.w3.org/1999/xlink"
-            app-canvas 
-            [attr.viewBox]="cfg.viewPortX+' '+cfg.viewPortY+' '+cfg.viewPortWidth+' '+cfg.viewPortHeight"
-            [ngClass]="{preview:cfg.preview}"
-        
-            [parsedPath]="parsedPath"
-            [targetPoints]="targetPoints"
-            [controlPoints]="controlPoints"
-            [(draggedPoint)]="draggedPoint"
-            (focusedItemChange)="focusItem($event)"
-            [focusedItem]="focusedItem"
-            [(hoveredItem)]="hoveredItem"
-            [(wasCanvasDragged)]="wasCanvasDragged"
-            [draggedIsNew]="draggedIsNew"
-            [decimals]="decimals"
-            [viewPortX]="cfg.viewPortX"
-            [viewPortY]="cfg.viewPortY"
-            [viewPortWidth]="cfg.viewPortWidth"
-            [viewPortHeight]="cfg.viewPortHeight"
-            [strokeWidth]="strokeWidth"
-            [preview]="cfg.preview"
-            [filled]="cfg.filled"
-            [showTicks]="cfg.showTicks"
-            [tickInterval]="cfg.tickInterval"
-            (afterModelChange)="afterModelChange()"
-            (dragging)="setIsDragging($event)"
-            (canvasWidthChange)="canvasWidth = $event || canvasWidth"
-            (canvasHeightChange)="canvasHeight = $event"
-            (emptyCanvas)="isLeftPanelOpened = false"
-            (viewPort)="updateViewPort($event.x, $event.y, $event.w, $event.h, $event.force)"
-            [editImages]="isEditingImages"
-            [images]="images"
-            [(focusedImage)]="focusedImage"
-            (cursorPosition)="setCursorPosition($event)"
-        ></svg>
-    </div>
 </div>
 
 
 <div *ngIf="isLeftPanelOpened"  class="footer">
-    <a href="https://github.com/Yqnn/svg-path-editor" target="_blank">
+    <a href="https://github.com/blast0/Angular-Svg-Editor" target="_blank">
         <mat-icon svgIcon="github"></mat-icon> GitHub
     </a>
-    <a href="https://github.com/sponsors/Yqnn" target="_blank">
+    <a href="https://github.com/sponsors/blast0" target="_blank">
         <mat-icon svgIcon="sponsor" class="sponsor"></mat-icon> Sponsor
     </a>
 </div>
